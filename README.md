@@ -57,3 +57,6 @@ Ruby on Railsを使用します。
 PostgreSQLします。
 ・シフト作成機能
 Pythonで書かれたOR-Toolsを使用します
+
+◼️ 画面遷移図URL
+https://www.figma.com/file/QD2ESO5Bmgk3NnBN5F81TV/%E3%82%B7%E3%83%95%E3%83%88%E3%82%B1%E3%82%A2%E3%83%8A%E3%83%93%E3%80%80%E7%94%BB%E9%9D%A2%E9%81%B7%E7%A7%BB%E5%9B%B3?type=design&node-id=0-1&mode=design&t=1xFOLNCIhMi0Ak0E-0
