@@ -1,0 +1,30 @@
+version: '3.8' # Docker Composeのバージョンを指定
+
+services:
+  db: # データベースサービス
+    image: postgres:13 # 使用するDockerイメージ（PostgreSQLのバージョン13）
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # データ永続化のためのボリュームマウント
+    environment: # 環境変数の設定
+      POSTGRES_DB: shift_care_navi_development
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+
+  web: # Webアプリケーションサービス（Railsアプリケーション）
+    build: # Dockerfileからイメージをビルド
+      context: . # ビルドコンテキスト（現在のディレクトリ）
+      args:
+        RAILS_ENV: development # ビルド時に渡す引数
+    command: bundle exec rails server -b 0.0.0.0 -p 3000 # コンテナ起動時に実行するコマンド
+    volumes:
+      - .:/rails # ホストのディレクトリをコンテナ内にマウント
+    ports:
+      - "3000:3000" # ホストのポート3000をコンテナのポート3000にマッピング
+    depends_on:
+      - db # このサービスはdbサービスに依存
+    environment: # 環境変数の設定
+      DATABASE_URL: postgres://postgres:password@db:5432/shift_care_navi_development
+      RAILS_ENV: development
+
+volumes:
+  postgres_data: # ボリューム定義
