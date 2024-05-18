@@ -1,1 +1,1 @@
-web: bundle exec rm -f /app/tmp/pids/server.pid && bundle exec rails server -p $PORT -e production
+web: rm -f /app/tmp/pids/server.pid && bin/rails server -p ${PORT:-5000} -e production
