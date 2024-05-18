@@ -24,9 +24,16 @@ ENV BUNDLE_WITHOUT="${BUNDLE_WITHOUT}"
 # Throw-away build stage to reduce size of final image
 FROM base as build
 
-# Install packages needed to build gems
+# Install packages needed to build gems and Python/OR-Tools
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libvips pkg-config libpq-dev python3 python3-pip
+    apt-get install --no-install-recommends -y \
+    build-essential \
+    git \
+    libvips \
+    pkg-config \
+    libpq-dev \
+    python3 \
+    python3-pip
 
 # Install application gems
 COPY Gemfile Gemfile.lock ./
@@ -53,7 +60,14 @@ FROM base
 
 # Install packages needed for deployment
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libsqlite3-0 libvips libpq5 && \
+    apt-get install --no-install-recommends -y \
+    curl \
+    libsqlite3-0 \
+    libvips \
+    libpq5 \
+    python3 \
+    python3-pip && \
+    pip3 install ortools && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Copy built artifacts: gems, application
