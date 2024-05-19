@@ -33,7 +33,9 @@ RUN apt-get update -qq && \
     pkg-config \
     libpq-dev \
     python3 \
-    python3-pip
+    python3-pip \
+    nodejs \
+    yarn
 
 # Install application gems
 COPY Gemfile Gemfile.lock ./
@@ -46,6 +48,9 @@ RUN pip3 install ortools
 
 # Copy application code
 COPY . .
+
+# Tailwind CSS configuration
+COPY ./tailwind.config.js ./postcss.config.js ./
 
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
