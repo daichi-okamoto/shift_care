@@ -24,9 +24,18 @@ ENV BUNDLE_WITHOUT="${BUNDLE_WITHOUT}"
 # Throw-away build stage to reduce size of final image
 FROM base as build
 
-# Install packages needed to build gems
+# Install packages needed to build gems and Python/OR-Tools
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y build-essential git libvips pkg-config libpq-dev python3 python3-pip
+    apt-get install --no-install-recommends -y \
+    build-essential \
+    git \
+    libvips \
+    pkg-config \
+    libpq-dev \
+    python3 \
+    python3-pip \
+    nodejs \
+    yarn
 
 # Install application gems
 COPY Gemfile Gemfile.lock ./
@@ -39,6 +48,9 @@ RUN pip3 install ortools
 
 # Copy application code
 COPY . .
+
+# Tailwind CSS configuration
+COPY ./tailwind.config.js ./postcss.config.js ./
 
 # Precompile bootsnap code for faster boot times
 RUN bundle exec bootsnap precompile app/ lib/
@@ -53,7 +65,14 @@ FROM base
 
 # Install packages needed for deployment
 RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y curl libsqlite3-0 libvips libpq5 && \
+    apt-get install --no-install-recommends -y \
+    curl \
+    libsqlite3-0 \
+    libvips \
+    libpq5 \
+    python3 \
+    python3-pip && \
+    pip3 install ortools && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
 # Copy built artifacts: gems, application
@@ -65,9 +84,6 @@ RUN useradd rails --create-home --shell /bin/bash && \
     chown -R rails:rails db log storage tmp
 USER rails:rails
 
-# Entrypoint prepares the database.
-ENTRYPOINT ["/rails/bin/docker-entrypoint"]
-
 # Start the server by default, this can be overwritten at runtime
 EXPOSE 3000
-CMD ["./bin/rails", "server"]
+CMD ["./bin/rails", "server", "-b", "0.0.0.0"]
