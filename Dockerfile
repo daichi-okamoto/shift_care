@@ -1,89 +1,31 @@
-# syntax = docker/dockerfile:1
+FROM ruby:3.1.2
 
-# Make sure RUBY_VERSION matches the Ruby version in .ruby-version and Gemfile
-ARG RUBY_VERSION=3.2.0
-FROM registry.docker.com/library/ruby:$RUBY_VERSION-slim as base
+ENV TZ Asia/Tokyo
+RUN apt-get update -qq && apt-get install -y build-essential libpq-dev nodejs && apt-get install -y vim
 
-# Rails app lives here
-WORKDIR /rails
+# Install yarn
+RUN curl -sL https://deb.nodesource.com/setup_18.x | bash - \
+  && wget --quiet -O - /tmp/pubkey.gpg https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add - \
+  && echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list \
+  && apt-get update -qq \
+  && apt-get install -y nodejs yarn
 
-# Set environment variables by default
-ARG RAILS_ENV=development
-ENV RAILS_ENV="${RAILS_ENV}" \
-    BUNDLE_DEPLOYMENT="1" \
-    BUNDLE_PATH="/usr/local/bundle"
+# 作業ディレクトリを指定
+WORKDIR /shift-app
 
-# Set BUNDLE_WITHOUT based on the environment
-RUN if [ "$RAILS_ENV" = "production" ]; then \
-      echo "BUNDLE_WITHOUT=development test" >> /etc/environment; \
-    else \
-      echo "BUNDLE_WITHOUT=" >> /etc/environment; \
-    fi
-ENV BUNDLE_WITHOUT="${BUNDLE_WITHOUT}"
+# ホストのGemfileとGemfile.lockをコンテナにコピー
+COPY Gemfile Gemfile.lock /shift-app/
 
-# Throw-away build stage to reduce size of final image
-FROM base as build
+# bundle installを実行
+RUN bundle install
 
-# Install packages needed to build gems and Python/OR-Tools
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y \
-    build-essential \
-    git \
-    libvips \
-    pkg-config \
-    libpq-dev \
-    python3 \
-    python3-pip \
-    nodejs \
-    yarn
+# ホストのカレントディレクトリをコンテナにコピー
+COPY . /shift-app/
 
-# Install application gems
-COPY Gemfile Gemfile.lock ./
-RUN bundle install && \
-    rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git && \
-    bundle exec bootsnap precompile --gemfile
+# entrypoint.shをコンテナ内の/usr/binにコピーし、実行権限を与える
+COPY entrypoint.sh /usr/bin/
+RUN chmod +x /usr/bin/entrypoint.sh
 
-# Install Python and OR-Tools
-RUN pip3 install ortools
-
-# Copy application code
-COPY . .
-
-# Tailwind CSS configuration
-COPY ./tailwind.config.js ./postcss.config.js ./
-
-# Precompile bootsnap code for faster boot times
-RUN bundle exec bootsnap precompile app/ lib/
-
-# Precompiling assets for production without requiring secret RAILS_MASTER_KEY
-RUN if [ "$RAILS_ENV" = "production" ]; then \
-      SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile; \
-    fi
-
-# Final stage for app image
-FROM base
-
-# Install packages needed for deployment
-RUN apt-get update -qq && \
-    apt-get install --no-install-recommends -y \
-    curl \
-    libsqlite3-0 \
-    libvips \
-    libpq5 \
-    python3 \
-    python3-pip && \
-    pip3 install ortools && \
-    rm -rf /var/lib/apt/lists /var/cache/apt/archives
-
-# Copy built artifacts: gems, application
-COPY --from=build /usr/local/bundle /usr/local/bundle
-COPY --from=build /rails /rails
-
-# Run and own only the runtime files as a non-root user for security
-RUN useradd rails --create-home --shell /bin/bash && \
-    chown -R rails:rails db log storage tmp
-USER rails:rails
-
-# Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
+# ENTRYPOINTとCMDを統合
+ENTRYPOINT ["entrypoint.sh"]
+CMD ["rails", "server", "-b", "0.0.0.0"]

@@ -1,30 +1,27 @@
-version: '3.8' # Docker Composeのバージョンを指定
-
+version: '3'
 services:
-  db: # データベースサービス
-    image: postgres:13 # 使用するDockerイメージ（PostgreSQLのバージョン13）
-    volumes:
-      - postgres_data:/var/lib/postgresql/data # データ永続化のためのボリュームマウント
-    environment: # 環境変数の設定
-      POSTGRES_DB: shift_care_navi_development
+  db:
+    image: postgres
+    environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-
-  web: # Webアプリケーションサービス（Railsアプリケーション）
-    build: # Dockerfileからイメージをビルド
-      context: . # ビルドコンテキスト（現在のディレクトリ）
-      args:
-        RAILS_ENV: development # ビルド時に渡す引数
-    command: bundle exec rails server -b 0.0.0.0 -p 3000 # コンテナ起動時に実行するコマンド
     volumes:
-      - .:/rails # ホストのディレクトリをコンテナ内にマウント
+      - postgres_volume:/var/lib/postgresql/data
     ports:
-      - "3000:3000" # ホストのポート3000をコンテナのポート3000にマッピング
-    depends_on:
-      - db # このサービスはdbサービスに依存
-    environment: # 環境変数の設定
-      DATABASE_URL: postgres://postgres:password@db:5432/shift_care_navi_development
-      RAILS_ENV: development
+      - '5433:5432'
 
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 3000 -b '0.0.0.0'"
+    volumes:
+      - .:/shift-app
+    ports:
+      - 3000:3000
+    stdin_open: true
+    tty: true
+    depends_on:
+      - db
 volumes:
-  postgres_data: # ボリューム定義
+  postgres_volume:

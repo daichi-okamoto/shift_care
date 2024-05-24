@@ -1,18 +1,11 @@
-// tailwind.config.js
-
 module.exports = {
   content: [
-    './app/**/*.html.erb',
+    './app/views/**/*.html.erb',
     './app/helpers/**/*.rb',
-    './app/javascript/**/*.js',
+    './app/assets/stylesheets/**/*.css',
+    './app/javascript/**/*.js'
   ],
-  theme: {
-    extend: {},
-  },
   plugins: [
-    require('daisyui'),
-  ],
-  daisyui: {
-    themes: false, // 必要に応じてテーマを設定
-  },
+    require('daisyui')
+  ]
 }
